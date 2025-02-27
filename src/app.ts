@@ -10,7 +10,7 @@ const io = new Server(server);
 app.use(express.static('public'));
 
 io.on('connection', (socket) => {
-    console.log('LDS: a user connected');
+    console.log('a user connected');
 
     socket.on('startAttack', (targetUrl: string) => {
         startAttack(targetUrl, (message: string) => {
@@ -20,14 +20,14 @@ io.on('connection', (socket) => {
 
     socket.on('stopAttack', () => {
         stopAttack();
-        io.emit('log', 'LDS: Attack stopped.');
+        io.emit('log', 'Attack stopped.');
     });
 
     socket.on('disconnect', () => {
-        console.log('LDS: user disconnected');
+        console.log('user disconnected');
     });
 });
 
 server.listen(5252, () => {
-    console.log('LDS: Server is running on http://localhost:5252');
+    console.log('Server is running on http://localhost:5252');
 });
