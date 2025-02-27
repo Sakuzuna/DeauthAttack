@@ -215,9 +215,9 @@ func flood() {
 			return
 		}
 
-		dialer, err := proxy.SOCKS4("tcp", proxyAddr)
+		dialer, err := proxy.SOCKS5("tcp", proxyAddr, nil, proxy.Direct)
 		if err != nil {
-			fmt.Printf("Error creating SOCKS4 dialer: %s\n", err)
+			fmt.Printf("Error creating SOCKS5 dialer: %s\n", err)
 			continue
 		}
 
