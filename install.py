@@ -1,4 +1,4 @@
-import subporcess
+import subprocess
 
 subprocess.run(['npm', 'init', '-y'])
 subprocess.run(['npm', 'install', 'express', 'ts-node', 'typescript', '@types/node', '@types/express'])
