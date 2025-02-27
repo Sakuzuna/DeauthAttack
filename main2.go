@@ -206,7 +206,6 @@ func flood() {
 		header += "Accept-Encoding: gzip, deflate\r\n\n" + data + "\r\n"
 	}
 	var s net.Conn
-	var err error
 	<-start
 	for {
 		proxyAddr := getRandomProxy() 
