@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DDOS Attack Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="banner">
+        <img src="logo.gif" alt="Banner">
+    </div>
+    <div class="container">
+        <input type="text" id="targetUrl" placeholder="Enter target URL">
+        <button id="startButton" class="myButton">Start</button>
+        <button id="stopButton" class="myButton">Stop</button>
+        <div id="logBox"></div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const logBox = document.getElementById('logBox');
+
+        document.getElementById('startButton').addEventListener('click', () => {
+            const targetUrl = document.getElementById('targetUrl').value;
+            socket.emit('startAttack', targetUrl);
+        });
+
+        document.getElementById('stopButton').addEventListener('click', () => {
+            socket.emit('stopAttack');
+        });
+
+        socket.on('log', (message) => {
+            logBox.innerHTML += `<p>${message}</p>`;
+        });
+    </script>
+</body>
+</html>
