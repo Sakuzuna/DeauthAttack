@@ -227,11 +227,17 @@ func flood() {
 				ServerName:         host,
 			}
 			s, err = dialer.Dial("tcp", addr)
-			if err == nil {
-				s = tls.Client(s, cfg)
+			if err != nil {
+				fmt.Printf("Error connecting to target server: %s\n", err)
+				continue
 			}
+			s = tls.Client(s, cfg)
 		} else {
 			s, err = dialer.Dial("tcp", addr)
+			if err != nil {
+				fmt.Printf("Error connecting to target server: %s\n", err)
+				continue
+			}
 		}
 
 		if err != nil {
