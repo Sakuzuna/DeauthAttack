@@ -292,20 +292,21 @@ func main() {
 	headerFile = strings.TrimSpace(headerFile)
 
 	u, err := url.Parse(targetURL)
-	if err != nil println("Please input a correct URL")
-		return
-	}
-	tmp := strings.Split(u.Host, ":")
-	host = tmp[0]
-	if u.Scheme == "https" {
-		port = "443"
-	} else {
-		port = u.Port()
-	}
-	if port == "" {
-		port = "80"
-	}
-	page = u.Path
+        if err != nil {
+            println("Please input a correct URL")
+            return
+        }
+        tmp := strings.Split(u.Host, ":")
+        host = tmp[0]
+        if u.Scheme == "https" {
+            port = "443"
+        } else {
+            port = u.Port()
+        }
+        if port == "" {
+            port = "80"
+        }
+        page = u.Path
 	if mode != "get" && mode != "post" {
 		println("Wrong mode, Only can use \"get\" or \"post\"")
 		return
