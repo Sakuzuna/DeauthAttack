@@ -372,7 +372,11 @@ func main() {
 	var wg sync.WaitGroup
 	for i := 0; i < threads; i++ {
 		wg.Add(1)
-		go flood(proxies[i%len(proxies)], &wg, timeoutChan)
+		if len(proxies) > 0 {
+			go flood(proxies[i%len(proxies)], &wg, timeoutChan)
+		} else {
+			go flood("", &wg, timeoutChan)
+		}
 	}
 
 	close(start)
