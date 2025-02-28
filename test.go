@@ -7,7 +7,6 @@ import (
 	"io"
 	"math/rand"
 	"net"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -354,11 +353,11 @@ func main() {
 	}
 	page = u.Path
 
-	if contain(page, "?") == 0 {
-		key = "?"
-	} else {
-		key = "&"
-	}
+	if strings.Contains(page, "?") {
+            key = "&"
+        } else {
+            key = "?"
+        }
 
 	var wg sync.WaitGroup
 	for i := 0; i < threads; i++ {
