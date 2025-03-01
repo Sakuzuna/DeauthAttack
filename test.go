@@ -7,7 +7,6 @@ import (
 	"io"
 	"math/rand"
 	"net"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -200,6 +199,7 @@ func flood(proxy string, wg *sync.WaitGroup, timeoutChan <-chan time.Time) {
 						InsecureSkipVerify: true,
 					})
 				} else if strings.HasPrefix(proxy, "socks5") {
+					// Поддержка SOCKS5 с авторизацией
 					proxyParts := strings.Split(proxy, "://")
 					if len(proxyParts) != 2 {
 						continue
@@ -207,9 +207,12 @@ func flood(proxy string, wg *sync.WaitGroup, timeoutChan <-chan time.Time) {
 					authParts := strings.Split(proxyParts[1], "@")
 					var auth *proxy.Auth
 					if len(authParts) == 2 {
-						auth = &proxy.Auth{
-							User:     strings.Split(authParts[0], ":")[0],
-							Password: strings.Split(authParts[0], ":")[1],
+						userPass := strings.Split(authParts[0], ":")
+						if len(userPass) == 2 {
+							auth = &proxy.Auth{
+								User:     userPass[0],
+								Password: userPass[1],
+							}
 						}
 						proxyParts[1] = authParts[1]
 					}
